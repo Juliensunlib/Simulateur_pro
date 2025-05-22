@@ -8,7 +8,7 @@ export const Header = () => {
         <div className="flex items-center space-x-2">
           <Sun className="h-8 w-8 text-yellow-300" />
           <Battery className="h-8 w-8 text-blue-300" />
-          <h1 className="text-2xl font-bold">SunLib Calculator</h1>
+          <h1 className="text-2xl font-bold">SunLib Calculator PRO</h1>
         </div>
         <div className="text-sm md:text-base">
           Simulateur d'abonnement d'autoconsommation solaire

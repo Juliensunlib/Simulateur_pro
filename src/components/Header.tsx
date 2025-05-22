@@ -11,7 +11,7 @@ export const Header = () => {
           <h1 className="text-2xl font-bold">SunLib Calculator</h1>
         </div>
         <div className="text-sm md:text-base">
-          Simulateur d'abonnement énergie solaire
+          Simulateur d'abonnement d'autoconsommation solaire
         </div>
       </div>
     </header>

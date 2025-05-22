@@ -1,6 +1,8 @@
 import React from 'react';
 import { Result } from '../Calculator';
 import { ArrowLeft, AlertCircle, CheckCircle } from 'lucide-react';
+import { calculatePVMonthlyPayment } from '../../utils/pvCalculations';
+import { calculateBatteryMonthlyPayment } from '../../utils/batteryCalculations';
 
 type Props = {
   result: Result;
@@ -108,35 +110,4 @@ export const ResultsDisplay = ({ result, onReset }: Props) => {
       </div>
     </div>
   );
-};
-
-// Helper functions to calculate monthly payments
-const calculatePVMonthlyPayment = (price: number, power: number, duration: number): number => {
-  const rates: { [key: number]: number } = {
-    25: 0.085,
-    20: 0.0875,
-    15: 0.091,
-    10: 0.10
-  };
-  
-  const annualRate = rates[duration];
-  const monthlyRate = annualRate / 12;
-  const months = duration * 12;
-  
-  const monthlyPayment = (price * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -months));
-  return Math.round(monthlyPayment * 100) / 100;
-};
-
-const calculateBatteryMonthlyPayment = (price: number, duration: number): number => {
-  const rates: { [key: number]: number } = {
-    15: 0.106,
-    10: 0.115
-  };
-  
-  const annualRate = rates[duration];
-  const monthlyRate = annualRate / 12;
-  const months = duration * 12;
-  
-  const monthlyPayment = (price * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -months));
-  return Math.round(monthlyPayment * 100) / 100;
 };

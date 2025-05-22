@@ -25,7 +25,7 @@ export const ResultsDisplay = ({ result, onReset }: Props) => {
 
         <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
           <p className="text-red-700">
-            Le montant de l'abonnement est à titre indicatif et sera revu par les équipes de SunLib.
+            Le montant de l'abonnement est donné à titre indicatif et pourra être révisé par les équipes de SunLib.
           </p>
         </div>
 

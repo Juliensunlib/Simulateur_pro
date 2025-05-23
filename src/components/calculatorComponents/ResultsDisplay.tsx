@@ -1,8 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Result } from '../Calculator';
-import { ArrowLeft, AlertCircle, CheckCircle } from 'lucide-react';
-import { calculatePVMonthlyPayment } from '../../utils/pvCalculations';
-import { calculateBatteryMonthlyPayment } from '../../utils/batteryCalculations';
+import { ArrowLeft, AlertCircle, CheckCircle, ChevronDown, ChevronUp } from 'lucide-react';
 
 type Props = {
   result: Result;
@@ -10,10 +8,121 @@ type Props = {
 };
 
 export const ResultsDisplay = ({ result, onReset }: Props) => {
+  const [showResidualValues, setShowResidualValues] = useState(false);
   const TVA_RATE = 0.20; // 20% TVA
 
   const formatPrice = (price: number) => {
     return price.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
+  const getPVResidualPercentages = (duration: number) => {
+    const percentages = {
+      "25": [106.0, 105.0, 104.0, 103.0, 102.0, 101.0, 99.0, 96.0, 95.0, 94.0, 93.0, 92.0, 91.0, 90.0, 87.0, 80.0, 71.0, 64.0, 55.0, 46.0, 36.0, 24.0, 12.8],
+      "20": [106.0, 105.0, 104.0, 103.0, 102.0, 100.0, 96.0, 93.0, 90.0, 86.0, 80.0, 75.0, 66.0, 59.0, 47.4, 37.8, 24.0, 12.9],
+      "15": [97.5, 95.0, 93.0, 91.0, 89.0, 86.0, 81.0, 75.0, 69.0, 61.0, 51.0, 37.0, 13.8],
+      "10": [94.0, 91.0, 87.0, 81.0, 71.0, 60.0, 42.0, 15.5]
+    };
+    return percentages[duration.toString()] || [];
+  };
+
+  const getBatteryResidualPercentages = (duration: number) => {
+    const percentages = {
+      "15": [94.5, 93.1, 91.3, 89.1, 86.3, 82.8, 78.4, 72.8, 65.8, 57.1, 46.0, 32.2, 14.8],
+      "10": [94.0, 91.2, 87.2, 81.4, 64.7, 60.4, 42.2, 15.8]
+    };
+    return percentages[duration.toString()] || [];
+  };
+
+  const calculateResidualValues = (initialPrice: number, duration: number, type: 'pv' | 'battery') => {
+    const percentages = type === 'pv' ? 
+      getPVResidualPercentages(duration) : 
+      getBatteryResidualPercentages(duration);
+
+    return percentages.map((percentage, index) => ({
+      year: index + 2,
+      value: Math.round(initialPrice * percentage / 100 * 100) / 100
+    }));
+  };
+
+  const renderResidualValuesTable = () => {
+    if (!showResidualValues) return null;
+
+    if (result.type === 'combined' && result.details?.pv && result.details?.battery) {
+      const pvValues = calculateResidualValues(result.details.pv.price, result.details.pv.duration, 'pv');
+      const batteryValues = calculateResidualValues(result.details.battery.price, result.details.battery.duration, 'battery');
+      
+      // Get all unique years
+      const years = new Set([
+        ...pvValues.map(v => v.year),
+        ...batteryValues.map(v => v.year)
+      ].sort((a, b) => a - b));
+
+      return (
+        <div className="mt-4 border-t border-gray-200 pt-4">
+          <h4 className="text-lg font-medium text-gray-700 mb-3">Valeurs résiduelles combinées</h4>
+          <div className="max-h-80 overflow-y-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left">
+                  <th className="pb-2">Année</th>
+                  <th className="pb-2 text-green-700">PV</th>
+                  <th className="pb-2 text-blue-700">Batterie</th>
+                  <th className="pb-2 text-green-700">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Array.from(years).map(year => {
+                  const pvValue = pvValues.find(v => v.year === year)?.value || 0;
+                  const batteryValue = batteryValues.find(v => v.year === year)?.value || 0;
+                  const totalValue = pvValue + batteryValue;
+
+                  return (
+                    <tr key={year} className="border-t border-gray-100">
+                      <td className="py-2">{year}</td>
+                      <td className="py-2 text-green-600">{formatPrice(pvValue)} €</td>
+                      <td className="py-2 text-blue-600">{formatPrice(batteryValue)} €</td>
+                      <td className="py-2 text-green-600 font-medium">{formatPrice(totalValue)} €</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      );
+    } else {
+      const values = calculateResidualValues(
+        result.type === 'pv' ? result.details?.pv?.price || 0 : result.details?.battery?.price || 0,
+        result.type === 'pv' ? result.details?.pv?.duration || 0 : result.details?.battery?.duration || 0,
+        result.type
+      );
+
+      const textColorClass = result.type === 'pv' ? 'text-green-600' : 'text-blue-600';
+
+      return (
+        <div className="mt-4 border-t border-gray-200 pt-4">
+          <h4 className="text-lg font-medium text-gray-700 mb-3">Valeurs résiduelles</h4>
+          <div className="max-h-80 overflow-y-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left">
+                  <th className="pb-2">Année</th>
+                  <th className={`pb-2 ${textColorClass}`}>Valeur HT</th>
+                </tr>
+              </thead>
+              <tbody>
+                {values.map(({ year, value }) => (
+                  <tr key={year} className="border-t border-gray-100">
+                    <td className="py-2">{year}</td>
+                    <td className={`py-2 ${textColorClass}`}>{formatPrice(value)} €</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      );
+    }
   };
 
   return (
@@ -25,7 +134,7 @@ export const ResultsDisplay = ({ result, onReset }: Props) => {
 
         <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
           <p className="text-red-700">
-            Le montant de l'abonnement est donné à titre indicatif et pourra être révisé par les équipes de SunLib.
+            Le montant de l'abonnement est à titre indicatif et sera revu par les équipes de SunLib.
           </p>
         </div>
 
@@ -81,6 +190,16 @@ export const ResultsDisplay = ({ result, onReset }: Props) => {
                   </div>
                 </div>
               )}
+
+              <button
+                onClick={() => setShowResidualValues(!showResidualValues)}
+                className="mt-4 w-full py-2 px-4 bg-green-100 hover:bg-green-200 text-green-700 rounded-md transition-colors flex items-center justify-center gap-2"
+              >
+                {showResidualValues ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                {showResidualValues ? 'Masquer les valeurs résiduelles' : 'Afficher les valeurs résiduelles'}
+              </button>
+
+              {renderResidualValuesTable()}
             </div>
 
             <div className="bg-green-600 text-white rounded-lg p-4 text-center">
@@ -110,4 +229,35 @@ export const ResultsDisplay = ({ result, onReset }: Props) => {
       </div>
     </div>
   );
+};
+
+// Helper functions to calculate monthly payments
+const calculatePVMonthlyPayment = (price: number, power: number, duration: number): number => {
+  const rates: { [key: number]: number } = {
+    25: 0.085,
+    20: 0.0875,
+    15: 0.091,
+    10: 0.10
+  };
+  
+  const annualRate = rates[duration];
+  const monthlyRate = annualRate / 12;
+  const months = duration * 12;
+  
+  const monthlyPayment = (price * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -months));
+  return Math.round(monthlyPayment * 100) / 100;
+};
+
+const calculateBatteryMonthlyPayment = (price: number, duration: number): number => {
+  const rates: { [key: number]: number } = {
+    15: 0.106,
+    10: 0.115
+  };
+  
+  const annualRate = rates[duration];
+  const monthlyRate = annualRate / 12;
+  const months = duration * 12;
+  
+  const monthlyPayment = (price * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -months));
+  return Math.round(monthlyPayment * 100) / 100;
 };
